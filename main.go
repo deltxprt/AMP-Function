@@ -3,13 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+
+	//	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/joho/godotenv"
 )
 
 type Instances struct {
@@ -59,6 +58,10 @@ type Status struct {
 			Units    string `json:"Units"`
 		} `json:"Active Users"`
 	} `json:"Metrics"`
+}
+
+type Response struct {
+	Body *[]Status
 }
 
 func ampLogin(url, user, pass string) string {
@@ -157,34 +160,25 @@ func statusInstances(url, sessionId string, instanceID Instances) *[]Status {
 
 		body, _ := ioutil.ReadAll(response.Body)
 		var getStatus Status
-		//fmt.Println(string(body))
 		err = json.Unmarshal([]byte(body), &getStatus)
 		if err != nil {
 			panic(err)
 		}
 		allinstancesStatus = append(allinstancesStatus, getStatus)
-		//fmt.Println(allinstancesStatus)
 
-		//getStatus = append(getStatus)
 	}
-	//fmt.Println(allinstancesStatus)
 	return &allinstancesStatus
 }
 
-func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+func Main() *Response {
 	ampUrl := os.Getenv("AMPUrl")
 	ampUser := os.Getenv("AMPUser")
 	ampPass := os.Getenv("AMPPass")
 	sessionId := ampLogin(ampUrl, ampUser, ampPass)
-	//fmt.Println(sessionId)
-	//getStatus(ampUrl, ampUser, ampPass)
 	allInstances := listInstances(ampUrl, sessionId)
-	//fmt.Println(allInstances)
 	StatusInstance := statusInstances(ampUrl, sessionId, *allInstances)
-	fmt.Println(StatusInstance)
 
+	return &Response{
+		Body: StatusInstance,
+	}
 }
