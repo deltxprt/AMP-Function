@@ -128,8 +128,9 @@ func listInstances(url, sessionId string) *Instances {
 	return &list_Instances
 }
 
-func statusInstances(url, sessionId string, instanceID Instances) *Status {
+func statusInstances(url, sessionId string, instanceID Instances) *[]Status {
 	statPerInstance := url + "/API/ADSModule/GetInstance"
+	var allinstancesStatus []Status
 	for _, instance := range instanceID.Result[0].AvailableInstances {
 		data := map[string]string{"SESSIONID": sessionId, "InstanceId": instance.InstanceID}
 		json_Data, err := json.Marshal(data)
@@ -161,11 +162,13 @@ func statusInstances(url, sessionId string, instanceID Instances) *Status {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(getStatus)
+		allinstancesStatus = append(allinstancesStatus, getStatus)
+		//fmt.Println(allinstancesStatus)
 
 		//getStatus = append(getStatus)
 	}
-	return nil
+	//fmt.Println(allinstancesStatus)
+	return &allinstancesStatus
 }
 
 func main() {
