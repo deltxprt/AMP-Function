@@ -1,0 +1,31 @@
+name: Upload Go package
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.19.3']
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+      
+      - name: Install dependencies
+        run: go get .
+      
+      - name: Builduing Go App
+        run: go build main.go -o ampstatus-azfunction
+      
+      - name: Upload Go test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: ampstatus-azfunction-${{ matrix.go-version }}
+          path: ampstatus-azfunction-${{ matrix.go-version }}
