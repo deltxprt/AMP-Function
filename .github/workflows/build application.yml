@@ -28,4 +28,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: main
-          path: ampstatus-azfunction-${{ matrix.go-version }}
+          path: main
