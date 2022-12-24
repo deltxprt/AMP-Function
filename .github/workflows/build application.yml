@@ -22,10 +22,10 @@ jobs:
         run: go get .
       
       - name: Builduing Go App
-        run: go build . ampstatus-azfunction
+        run: go build main.go
       
       - name: Upload Go test results
         uses: actions/upload-artifact@v3
         with:
-          name: ampstatus-azfunction-${{ matrix.go-version }}
+          name: main
           path: ampstatus-azfunction-${{ matrix.go-version }}
