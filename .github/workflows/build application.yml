@@ -22,7 +22,7 @@ jobs:
         run: go get .
       
       - name: Builduing Go App
-        run: go build main.go -o ampstatus-azfunction
+        run: go build ampstatus-azfunction
       
       - name: Upload Go test results
         uses: actions/upload-artifact@v3
