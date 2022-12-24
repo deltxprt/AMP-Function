@@ -3,13 +3,18 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 
 	//	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 )
+
+type sessionIDStruct struct {
+	sessionId string `json:"SESSIONID"`
+}
 
 type Instances struct {
 	Result []struct {
@@ -61,30 +66,31 @@ type Status struct {
 }
 
 type Response struct {
-	Body *[]Status
+	Content *[]Status
 }
 
-func ampLogin(url, user, pass string) string {
+func ampLogin(url, user, pass string) *sessionIDStruct {
 	loginUrl := url + "/API/Core/Login"
-
-	data := map[string]string{"username": user, "password": pass, "token": "", "rememberMe": "false"}
-	json_Data, err := json.Marshal(data)
-
-	if err != nil {
-		panic(err)
+	data := map[string]string{
+		"username":   user,
+		"password":   pass,
+		"token":      "",
+		"rememberMe": "false",
 	}
+	payloadBuf := new(bytes.Buffer)
+	json.NewEncoder(payloadBuf).Encode(data)
 
-	request, err := http.NewRequest("POST", loginUrl, bytes.NewBuffer(json_Data))
+	request, err := http.NewRequest("POST", loginUrl, payloadBuf)
 	request.Header.Set("accept", "application/json; charset=UTF-8")
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
 	}
 
 	client := &http.Client{}
 	response, error := client.Do(request)
 	if error != nil {
-		panic(error)
+		fmt.Println(error)
 	}
 	defer response.Body.Close()
 
@@ -92,31 +98,32 @@ func ampLogin(url, user, pass string) string {
 	var sessionId map[string]interface{}
 	json.Unmarshal(body, &sessionId)
 
-	return sessionId["sessionID"].(string)
+	sessionIdString := sessionId["sessionID"].(string)
+
+	return &sessionIDStruct{sessionId: sessionIdString}
 }
 
-func listInstances(url, sessionId string) *Instances {
+func listInstances(url string, sessionId string) *Instances {
 	listInstances := url + "/API/ADSModule/GetInstances"
 
 	data := map[string]string{"SESSIONID": sessionId}
-	json_Data, err := json.Marshal(data)
-
+	jsonData, err := json.Marshal(data)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 
-	request, err := http.NewRequest("POST", listInstances, bytes.NewBuffer(json_Data))
+	request, err := http.NewRequest("POST", listInstances, bytes.NewBuffer(jsonData))
 	request.Header.Set("accept", "application/json; charset=UTF-8")
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	client := &http.Client{}
 	response, error := client.Do(request)
 
 	if error != nil {
-		panic(error)
+		log.Fatal(error)
 	}
 
 	defer response.Body.Close()
@@ -126,12 +133,12 @@ func listInstances(url, sessionId string) *Instances {
 	var list_Instances Instances
 	err = json.Unmarshal([]byte(body), &list_Instances)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	return &list_Instances
 }
 
-func statusInstances(url, sessionId string, instanceID Instances) *[]Status {
+func statusInstances(url string, sessionId string, instanceID Instances) *[]Status {
 	statPerInstance := url + "/API/ADSModule/GetInstance"
 	var allinstancesStatus []Status
 	for _, instance := range instanceID.Result[0].AvailableInstances {
@@ -146,14 +153,14 @@ func statusInstances(url, sessionId string, instanceID Instances) *[]Status {
 		request.Header.Set("accept", "application/json; charset=UTF-8")
 
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 
 		client := &http.Client{}
 		response, error := client.Do(request)
 
 		if error != nil {
-			panic(error)
+			log.Fatal(err)
 		}
 
 		defer response.Body.Close()
@@ -162,7 +169,7 @@ func statusInstances(url, sessionId string, instanceID Instances) *[]Status {
 		var getStatus Status
 		err = json.Unmarshal([]byte(body), &getStatus)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		allinstancesStatus = append(allinstancesStatus, getStatus)
 
@@ -170,15 +177,39 @@ func statusInstances(url, sessionId string, instanceID Instances) *[]Status {
 	return &allinstancesStatus
 }
 
-func Main() *Response {
+func ampStatus() []byte {
 	ampUrl := os.Getenv("AMPUrl")
 	ampUser := os.Getenv("AMPUser")
 	ampPass := os.Getenv("AMPPass")
-	sessionId := ampLogin(ampUrl, ampUser, ampPass)
-	allInstances := listInstances(ampUrl, sessionId)
-	StatusInstance := statusInstances(ampUrl, sessionId, *allInstances)
-
-	return &Response{
-		Body: StatusInstance,
+	sessionIdToken := ampLogin(ampUrl, ampUser, ampPass)
+	allInstances := listInstances(ampUrl, sessionIdToken.sessionId)
+	StatusInstance := statusInstances(ampUrl, sessionIdToken.sessionId, *allInstances)
+	// return Response{
+	// 	Content: StatusInstance,
+	// }
+	jsonResponse, err := json.Marshal(StatusInstance)
+	if err != nil {
+		fmt.Println(err)
 	}
+	return jsonResponse
+}
+
+func ampInfoHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	result := ampStatus()
+	fmt.Fprint(w, string(result))
+}
+
+func main() {
+	listenAddr := ":8080"
+	if val, ok := os.LookupEnv("FUNCTIONS_CUSTOMHANDLER_PORT"); ok {
+		listenAddr = ":" + val
+	}
+	http.HandleFunc("/api/AMPStatus", ampInfoHandler)
+	log.Printf("About to listen on %s. Go to https://127.0.0.1%s/", listenAddr, listenAddr)
+	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
