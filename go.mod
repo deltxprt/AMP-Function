@@ -1,3 +1,3 @@
-module main.go
+module ampstatus-azfunction
 
-go 1.18
+go 1.19
