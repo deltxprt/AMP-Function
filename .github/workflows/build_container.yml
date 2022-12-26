@@ -31,6 +31,7 @@ jobs:
           path: ampstatus-azfunction
   
   push_to_registries:
+    environment: general
     name: Push Docker image to multiple registries
     runs-on: ubuntu-latest
     needs: build
