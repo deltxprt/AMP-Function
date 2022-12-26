@@ -177,10 +177,13 @@ func statusInstances(url string, sessionId string, instanceID Instances) *[]Stat
 	return &allinstancesStatus
 }
 
-func ampStatus() []byte {
+func ampStatus() string {
 	ampUrl := os.Getenv("AMPUrl")
 	ampUser := os.Getenv("AMPUser")
 	ampPass := os.Getenv("AMPPass")
+	if ampUrl == "" || ampUser == "" || ampPass == "" {
+		fmt.Println("Please set the environment variables")
+	}
 	sessionIdToken := ampLogin(ampUrl, ampUser, ampPass)
 	allInstances := listInstances(ampUrl, sessionIdToken.sessionId)
 	StatusInstance := statusInstances(ampUrl, sessionIdToken.sessionId, *allInstances)
@@ -191,7 +194,7 @@ func ampStatus() []byte {
 	if err != nil {
 		fmt.Println(err)
 	}
-	return jsonResponse
+	return string(jsonResponse)
 }
 
 func ampInfoHandler(w http.ResponseWriter, r *http.Request) {
@@ -201,7 +204,16 @@ func ampInfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result := ampStatus()
-	fmt.Fprint(w, string(result))
+	fmt.Fprint(w, result)
+}
+
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	fmt.Fprint(w, "OK")
 }
 
 func main() {
@@ -210,6 +222,7 @@ func main() {
 		listenAddr = ":" + val
 	}
 	http.HandleFunc("/api/AMPStatus", ampInfoHandler)
+	http.HandleFunc("/api/HealthCheck", healthCheckHandler)
 	log.Printf("About to listen on %s. Go to https://127.0.0.1%s/", listenAddr, listenAddr)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
