@@ -19,7 +19,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
       
       - name: Install dependencies
-        run: go get .
+        run: go get ./cmd/api/
       
       - name: Builduing Go App
         run: go build ./cmd/api/
