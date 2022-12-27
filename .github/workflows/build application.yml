@@ -28,7 +28,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ampstatus-azfunction
-          path: ampstatus-azfunction
+          path: api
       
   push_to_registries:
     environment: general
