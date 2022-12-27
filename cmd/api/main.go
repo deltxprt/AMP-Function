@@ -2,7 +2,6 @@ package main
 
 import (
 	"ampstatus-azfunction/internal/data"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -18,57 +17,6 @@ type Response struct {
 
 type config struct {
 	port int
-	// env  string
-	// db   struct {
-	// 	dsn          string
-	// 	maxOpenConns int
-	// 	maxIdleConns int
-	// 	maxIdleTime  string
-	// }
-}
-
-type application struct {
-	config config
-	logger *log.Logger
-}
-
-func ampStatus() string {
-	ampUrl := os.Getenv("AMPUrl")
-	ampUser := os.Getenv("AMPUser")
-	ampPass := os.Getenv("AMPPass")
-	if ampUrl == "" || ampUser == "" || ampPass == "" {
-		fmt.Println("Please set the environment variables")
-	}
-	sessionIdToken := ampLogin(ampUrl, ampUser, ampPass)
-	allInstances := listInstances(ampUrl, sessionIdToken.sessionId)
-	StatusInstance := statusInstances(ampUrl, sessionIdToken.sessionId, *allInstances)
-	message := Response{
-		Content: StatusInstance,
-	}
-	jsonResponse, err := json.Marshal(message)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return string(jsonResponse)
-}
-
-func ampInfoHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	result := ampStatus()
-	fmt.Fprint(w, result)
-}
-
-func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	fmt.Fprint(w, "OK")
 }
 
 func main() {
