@@ -13,5 +13,7 @@ func routes() http.Handler {
 
 	router.HandlerFunc(http.MethodGet, "/api/ampstatus", ampInfoHandler)
 
+	router.HandlerFunc(http.MethodGet, "/api/ampstatus/:id", ampInfoHandler)
+
 	return router
 }

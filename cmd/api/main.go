@@ -4,6 +4,7 @@ import (
 	"ampstatus-azfunction/internal/data"
 	"flag"
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
@@ -21,6 +22,11 @@ type config struct {
 
 func main() {
 	var cfg config
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	listenAddr := 8080
 	if val, ok := os.LookupEnv("FUNCTIONS_CUSTOMHANDLER_PORT"); ok {

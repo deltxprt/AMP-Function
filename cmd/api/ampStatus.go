@@ -14,8 +14,8 @@ func ampStatus() string {
 		fmt.Println("Please set the environment variables")
 	}
 	sessionIdToken := ampLogin(ampUrl, ampUser, ampPass)
-	allInstances := listInstances(ampUrl, sessionIdToken.sessionId)
-	StatusInstance := statusInstances(ampUrl, sessionIdToken.sessionId, *allInstances)
+	listInstances(ampUrl, sessionIdToken.sessionId)
+	StatusInstance := statusInstances(ampUrl, sessionIdToken.sessionId)
 	message := Response{
 		Content: StatusInstance,
 	}

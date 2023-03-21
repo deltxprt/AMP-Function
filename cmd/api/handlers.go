@@ -11,6 +11,7 @@ func ampInfoHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
 	result := ampStatus()
 	fmt.Fprint(w, result)
 }
