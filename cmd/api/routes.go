@@ -6,14 +6,14 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func routes() http.Handler {
+func (app *application) routes() http.Handler {
 	router := httprouter.New()
 
-	router.HandlerFunc(http.MethodGet, "/api/healthcheck", healthCheckHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", healthCheckHandler)
 
-	router.HandlerFunc(http.MethodGet, "/api/ampstatus", ampInfoHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/ampstatus", app.listInstancesHandler)
 
-	router.HandlerFunc(http.MethodGet, "/api/ampstatus/:id", ampInfoHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/ampstatus/:instance", app.ListInstanceHandler)
 
 	return router
 }
