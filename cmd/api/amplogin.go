@@ -13,12 +13,12 @@ type sessionIDStruct struct {
 }
 
 func (app *application) ampLogin() {
-	loginUrl := app.config.amp.url + "/API/Core/Login"
+	loginUrl := app.config.AMP.Url + "/API/Core/Login"
 
 	data := map[string]string{
-		"username":   app.config.amp.username,
-		"password":   app.config.amp.password,
-		"token":      app.config.amp.token,
+		"username":   app.config.AMP.Username,
+		"password":   app.config.AMP.Password,
+		"token":      app.config.AMP.Token,
 		"rememberMe": "false",
 	}
 	payloadBuf := new(bytes.Buffer)
@@ -44,5 +44,5 @@ func (app *application) ampLogin() {
 
 	sessionIdString := sessionId["sessionID"].(string)
 
-	app.config.amp.sessionId = sessionIdString
+	app.config.AMP.SessionId = sessionIdString
 }

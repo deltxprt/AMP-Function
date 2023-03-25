@@ -1,15 +1,20 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 )
 
-func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", http.MethodGet)
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return
+func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
+	env := envelope{
+		"status": "available",
+		"system_info": map[string]string{
+			"environment": app.config.Env,
+			"version":     version,
+		},
 	}
-	fmt.Fprint(w, "OK")
+
+	err := app.writeJSON(w, http.StatusOK, env, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }

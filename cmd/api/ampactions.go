@@ -10,8 +10,8 @@ import (
 )
 
 func (app *application) updateInstancesHandler() {
-	listInstances := app.config.amp.url + "/API/ADSModule/GetInstances"
-	sessionId := app.config.amp.sessionId
+	listInstances := app.config.AMP.Url + "/API/ADSModule/GetInstances"
+	sessionId := app.config.AMP.SessionId
 	var list_Instances data.InstancesData
 
 	dataBody := map[string]string{"SESSIONID": sessionId}
