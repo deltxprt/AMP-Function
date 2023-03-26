@@ -1,16 +1,15 @@
 package main
 
 import (
-	"ampstatus-azfunction/internal/data"
-	"ampstatus-azfunction/internal/jsonlog"
-	"ampstatus-azfunction/internal/vcs"
+	"amp-management-api/internal/data"
+	"amp-management-api/internal/jsonlog"
+	"amp-management-api/internal/vcs"
 	"context"
 	"expvar"
 	"flag"
 	"fmt"
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/yaml.v3"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -56,22 +55,15 @@ func main() {
 	flag.Parse()
 
 	// Load the configuration settings from the config.yml file.
-	configFile, err := os.ReadFile("/etc/api/config/config.yaml")
+	configFile, err := os.ReadFile("/config.yaml")
 	if err != nil {
-		logger.PrintFatal(err, nil)
+		logger.PrintError(err, nil)
 	}
 
 	err = yaml.Unmarshal(configFile, &cfg)
 	if err != nil {
-		logger.PrintFatal(err, nil)
+		logger.PrintError(err, nil)
 	}
-
-	log.Println(cfg.Port)
-
-	//err := godotenv.Load()
-	//if err != nil {
-	//	log.Fatal("Error loading .env file")
-	//}
 
 	logger.PrintInfo(cfg.Env, nil)
 
@@ -80,29 +72,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	//	if os.Getenv("AMPURL") == "" || os.Getenv("AMPUser") == "" || os.Getenv("AMPPass") == "" {
-	//		logger.PrintInfo("Please set the environment variables", nil)
-	//	}
-
-	//	cfg.amp.url = os.Getenv("AMPURL")
-	//	cfg.amp.username = os.Getenv("AMPUser")
-	//	cfg.amp.password = os.Getenv("AMPPass")
-	//
-	//	cfg.db.address = os.Getenv("REDISADDR")
-	//	cfg.db.password = os.Getenv("REDISPW")
-	cfg.Database.Database = 0
+	//cfg.Database.Database = 0
 	cfg.Database.MaxIdleConns = 10
 	cfg.Database.ConnMaxIdleTime = 5
-
-	//	listenAddr := 8080
-	//	if val, ok := os.LookupEnv("FUNCTIONS_CUSTOMHANDLER_PORT"); ok {
-	//		port, err := strconv.Atoi(val)
-	//		if err != nil {
-	//			log.Fatal(err)
-	//		}
-	//		listenAddr = port
-	//	}
-	//	flag.IntVar(&cfg.port, "port", listenAddr, "API server port")
 
 	rdb, err := openDB(cfg)
 
@@ -127,9 +99,10 @@ func main() {
 
 func openDB(cfg Config) (*redis.Client, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr: cfg.Database.Address,
-		//		Password: cfg.db.password,
-		DB: cfg.Database.Database,
+		Addr:         cfg.Database.Address,
+		Password:     cfg.Database.Password,
+		DB:           cfg.Database.Database,
+		MaxIdleConns: cfg.Database.MaxIdleConns,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

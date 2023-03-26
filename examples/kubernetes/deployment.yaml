@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amp-api
+  labels:
+    app: amp-api
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: amp-api
+  template:
+    metadata:
+      labels:
+        app: amp-api
+    spec:
+      containers:
+        - image: quay.io/vincewth/amp-api-management:v1.0.1
+          name: amp-api
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+      volumes:
+        - name: config
+          configMap:
+            name: amp-api-config
+            items:
+              - key: config
+                path: config.yaml

@@ -9,14 +9,41 @@ It's also an app to manage AMP from Discord via API calls.
 
 You will need to create a config file in the same directory as the executable. The config file is a YAML file.
 
+# Dependencies
+
+- [Redis](https://redis.io/)
+
+## Container Example
+
+### Custom DockerFile/Container File
+
+see [ContainerFile](/Containerfile)
+
+### adhoc
+
+`docker run -d -v /path/to/config.yaml:/etc/api/config/config.yaml --name amp-function --restart unless-stopped amp-function:latest`
+
+### docker-compose
+
+see [docker-compose.yml](/examples/docker-compose.yaml)
+
+### Podman (WIP)
+
+see [podman-pods.yml](/podman-pods.yaml)
+
+### Kubernetes
+
+see [kubernetes example folder](/examples/kuberntes)
+
 ## Config File Example
 
+*config.yaml*
 ```yaml
 port: 8081
 env: "Production"
-redis:
+database:
   address: "localhost:6379"
-  db: 0
+  database: 0
 amp:
   url: "https://my.amp.enpoint.com"
   username: "ReadUser"

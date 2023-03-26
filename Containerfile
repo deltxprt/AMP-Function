@@ -1,17 +1,24 @@
-FROM cgr.dev/chainguard/go:latest as build
+# syntax=docker/dockerfile:1
 
-RUN mkdir /etc/api
-RUN mkdir /etc/api/conf
+FROM golang:1.20-alpine as build
 
-COPY . /etc/api
+WORKDIR /app
 
-WORKDIR /etc/api
+COPY go.mod ./
 
-RUN go build -o amp ./cmd/api
+RUN go mod download
 
-FROM cgr.dev/chainguard/static:latest
+COPY . .
 
-COPY --from=build /etc/api/amp /amp
+run go build -o amp ./cmd/api
+
+FROM golang:1.20-alpine
+
+WORKDIR /
+
+COPY --from=build /app/amp /amp
+
+EXPOSE 8080
 
 CMD [ "/amp" ]
 

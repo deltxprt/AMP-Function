@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+    web:
+        image: "quay.io/vincewth/amp-api-management:v1.0"
+        ports:
+        - "8080:8080"
+        volumes:
+        - /path/to/config:/etc/api/config
+        links:
+          - redis
+        networks:
+            - amp
+    redis:
+        name: redis
+        image: redis/redis-stack-serverr:6.2.6-v6
+        command: redis-server --save 20 1 --loglevel warning --requirepass 5uper$eCretP4$$W0rd
+        volumes:
+          - cache:/data
+        networks:
+            - amp
+networks:
+    amp:
+      name: amp
+
+volumes:
+    cache:
+        driver: local

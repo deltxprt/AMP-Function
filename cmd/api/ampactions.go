@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ampstatus-azfunction/internal/data"
+	"amp-management-api/internal/data"
 	"bytes"
 	"encoding/json"
 	"io"

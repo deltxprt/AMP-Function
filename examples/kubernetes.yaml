@@ -1,0 +1,135 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amp-api
+  labels:
+      app: amp-api
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: amp-api
+  template:
+    metadata:
+      labels:
+        app: amp-api
+    spec:
+      containers:
+        - image: quay.io/vincewth/amp-api-management:v1.0.1
+          name: amp-api
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+      volumes:
+        - name: config
+          configMap:
+            name: amp-api-config
+            items:
+              - key: config
+                path: config.yaml
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: amp-api-config
+data:
+  config: |
+    port: 8081
+    env: "Production"
+    redis:
+      address: "localhost:6379"
+      db: 0
+    amp:
+      url: "https://my.amp.enpoint.com"
+      username: "ReadUser"
+      password: "5uper$eCretP4$$W0rd"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: amp-api
+spec:
+  selector:
+      app: amp-api
+  ports:
+      - protocol: TCP
+        port: 8080
+        targetPort: 8080
+
+---
+apiVersion: v1
+kind: ingressRoute
+metadata:
+  name: amp-api
+spec:
+    entryPoints:
+        - websecure
+    routes:
+        - match: Host(`amp-api.example.com`)
+          kind: Rule
+          services:
+            - name: amp-api
+              port: 8080
+    tls:
+      secretName: searxng-tls
+
+---
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: redis-stack-server
+  labels:
+      app: redis
+spec:
+    replicas: 2
+    revisionHistoryLimit: 3
+    selector:
+        matchLabels:
+        app: redis
+    template:
+        metadata:
+        labels:
+            app: redis
+        spec:
+        containers:
+          - image: redis/redis-stack-server:6.2.6-v6
+            name: redis
+            ports:
+              - containerPort: 6379
+                name: redis
+                protocol: TCP
+            persistentVolumeClaim:
+              claimName: redis-stack-server-pvc
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-stack-server-pvc
+spec:
+  accessModes:
+      - ReadWriteOnce
+  resources:
+      requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  selector:
+      app: redis
+  ports:
+  - protocol: TCP
+    port: 6379
+    targetPort: 6379
