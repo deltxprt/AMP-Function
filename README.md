@@ -61,5 +61,5 @@ amp:
 
 * If you want to make the use not see an instance just don't give them the Manage permission for that instance. (see example below)
 
-here an example of the permissions i gave to the User:
+here's an example of the permissions i gave to the User:
 ![AMP_Permissions_Menu](/docs/AMP_Permissions_Menu.png)
