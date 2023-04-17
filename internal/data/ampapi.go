@@ -2,8 +2,8 @@ package data
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/redis/go-redis/v9"
+	"database/sql"
+	"errors"
 	"time"
 )
 
@@ -58,57 +58,135 @@ type InstanceStatus struct {
 }
 
 type InstancesModel struct {
-	DB *redis.Client
+	DB *sql.DB
 }
 
-func (i InstancesModel) Update(instances InstanceStatus) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (m InstancesModel) Create(instance InstanceStatus) error {
+
+	query := `
+	INSERT INTO instances (instance_id, name, module, running, suspended, cpu_usage, cpu_max, cpu_percent, memory_usage, memory_max, memory_percent, users_active, users_max, users_percent)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+	RETURNING id, name, running`
+
+	args := []any{instance.InstanceID, instance.FriendlyName, instance.Module, instance.Running, instance.Suspended, instance.Metrics.CPUUsage.RawValue, instance.Metrics.CPUUsage.MaxValue, instance.Metrics.CPUUsage.Percent, instance.Metrics.MemoryUsage.RawValue, instance.Metrics.MemoryUsage.MaxValue, instance.Metrics.MemoryUsage.Percent, instance.Metrics.ActiveUsers.RawValue, instance.Metrics.ActiveUsers.MaxValue, instance.Metrics.ActiveUsers.Percent}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	//	instanceInfo := map[string]string{
-	//		"InstanceID":   instances.InstanceID,
-	//		"InstanceName": instances.InstanceName,
-	//	}
-	//	log.Print(instanceInfo)
-	jsonFormat, err := json.Marshal(instances)
+
+	return m.DB.QueryRowContext(ctx, query, args...).Scan(&instance.InstanceID, &instance.FriendlyName, &instance.Running)
+}
+
+func (m InstancesModel) Get(instanceName string) (*InstanceStatus, error) {
+
+	query := `SELECT name, module, running, cpu_usage, cpu_max, cpu_percent, memory_usage, memory_max, memory_percent, users_active, users_max, users_percent FROM instances WHERE name = $1`
+
+	var instance InstanceStatus
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, instanceName).Scan(
+		&instance.FriendlyName,
+		&instance.Module,
+		&instance.Running,
+		&instance.Metrics.CPUUsage.RawValue,
+		&instance.Metrics.CPUUsage.MaxValue,
+		&instance.Metrics.CPUUsage.Percent,
+		&instance.Metrics.MemoryUsage.RawValue,
+		&instance.Metrics.MemoryUsage.MaxValue,
+		&instance.Metrics.MemoryUsage.Percent,
+		&instance.Metrics.ActiveUsers.RawValue,
+		&instance.Metrics.ActiveUsers.MaxValue,
+		&instance.Metrics.ActiveUsers.Percent,
+	)
+
 	if err != nil {
-		return err
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
 	}
-	return i.DB.Set(ctx, instances.FriendlyName, jsonFormat, 0).Err()
+
+	return &instance, nil
 }
 
-func (i InstancesModel) GetAll() ([]InstanceStatus, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (m InstancesModel) Update(instances InstanceStatus) error {
+
+	query := `
+	UPDATE instances
+	SET running = $1, suspended = $2, cpu_usage = $3, cpu_usage_max = $4, cpu_usage_percent = $5, memory_usage = $6, memory_usage_max = $7, memory_usage_percent = $8, active_users = $9, active_users_max = $10, active_users_percent = $11
+	WHERE name = $12
+	RETURNING id, name, running`
+	args := []any{
+		instances.Running,
+		instances.Suspended,
+		instances.Metrics.CPUUsage.RawValue,
+		instances.Metrics.CPUUsage.MaxValue,
+		instances.Metrics.CPUUsage.Percent,
+		instances.Metrics.MemoryUsage.RawValue,
+		instances.Metrics.MemoryUsage.MaxValue,
+		instances.Metrics.MemoryUsage.Percent,
+		instances.Metrics.ActiveUsers.RawValue,
+		instances.Metrics.ActiveUsers.MaxValue,
+		instances.Metrics.ActiveUsers.Percent,
+		instances.FriendlyName,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	iter := i.DB.Scan(ctx, 0, "*", 0).Iterator()
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&instances.InstanceID, &instances.FriendlyName, &instances.Running)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m InstancesModel) GetAll() ([]InstanceStatus, error) {
+	query := `SELECT name, module, running, cpu_usage, cpu_max, cpu_percent, memory_usage, memory_max, memory_percent, users_active, users_max, users_percent FROM instances`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
 	var instances []InstanceStatus
-	for iter.Next(ctx) {
+
+	rows, err := m.DB.QueryContext(ctx, query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
 		var instance InstanceStatus
-		jsonResult := i.DB.Get(ctx, iter.Val()).Val()
-		err := json.Unmarshal([]byte(jsonResult), &instance)
+		err := rows.Scan(
+			&instance.FriendlyName,
+			&instance.Module,
+			&instance.Running,
+			&instance.Metrics.CPUUsage.RawValue,
+			&instance.Metrics.CPUUsage.MaxValue,
+			&instance.Metrics.CPUUsage.Percent,
+			&instance.Metrics.MemoryUsage.RawValue,
+			&instance.Metrics.MemoryUsage.MaxValue,
+			&instance.Metrics.MemoryUsage.Percent,
+			&instance.Metrics.ActiveUsers.RawValue,
+			&instance.Metrics.ActiveUsers.MaxValue,
+			&instance.Metrics.ActiveUsers.Percent,
+		)
 
 		if err != nil {
-			return nil, ErrRecordNotFound
+			return nil, err
 		}
-		//log.Print(instance.InstanceID)
+
 		instances = append(instances, instance)
 	}
 
 	return instances, nil
-}
-
-func (i InstancesModel) Get(instanceName string) (InstanceStatus, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	var instance InstanceStatus
-
-	instanceData := i.DB.Get(ctx, instanceName).Val()
-	err := json.Unmarshal([]byte(instanceData), &instance)
-	if err != nil {
-		return instance, err
-	}
-
-	return instance, nil
 }
