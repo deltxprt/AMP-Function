@@ -10,15 +10,15 @@ import (
 )
 
 func (app *application) updateInstancesHandler() {
-	listInstances := app.config.AMP.Url + "/API/ADSModule/GetInstances"
+	url := app.config.AMP.Url + "/API/ADSModule/GetInstances"
 	sessionId := app.config.AMP.SessionId
-	var list_Instances data.InstancesData
+	var listInstances data.InstancesData
 
 	dataBody := map[string]string{"SESSIONID": sessionId}
 	buffer := new(bytes.Buffer)
 	json.NewEncoder(buffer).Encode(dataBody)
 
-	request, err := http.NewRequest("POST", listInstances, buffer)
+	request, err := http.NewRequest("POST", url, buffer)
 	request.Header.Set("accept", "application/json; charset=UTF-8")
 
 	if err != nil {
@@ -36,20 +36,28 @@ func (app *application) updateInstancesHandler() {
 
 	body, _ := io.ReadAll(response.Body)
 
-	err = json.Unmarshal([]byte(body), &list_Instances)
+	err = json.Unmarshal([]byte(body), &listInstances)
 	if err != nil {
 		log.Fatal(err)
 	}
-	for i := 0; i < len(list_Instances.Result); i++ {
-		hostInstances := list_Instances.Result[i].AvailableInstances
+	for i := 0; i < len(listInstances.Result); i++ {
+		hostInstances := listInstances.Result[i].AvailableInstances
 		for j := 0; j < len(hostInstances); j++ {
 			var instanceInformation data.InstanceStatus
 			instanceInformation = hostInstances[j].InstanceStatus
-			//log.Println(instanceID, instanceFriendlyName, instanceName)
-			err := app.models.Instance.Update(instanceInformation)
+			_, err := app.dbmodels.Instance.Get(instanceInformation.FriendlyName)
 			if err != nil {
-				log.Println(err)
+				err := app.dbmodels.Instance.Create(instanceInformation)
+				if err != nil {
+					log.Printf("Error creating instance with error: %s", err)
+				}
+			} else {
+				err := app.dbmodels.Instance.Update(instanceInformation)
+				if err != nil {
+					log.Println(err)
+				}
 			}
+			//log.Println(instanceID, instanceFriendlyName, instanceName)
 		}
 	}
 }
@@ -58,7 +66,7 @@ func (app *application) listInstancesHandler(w http.ResponseWriter, r *http.Requ
 	app.ampLogin()
 	go app.updateInstancesHandler()
 
-	instances, err := app.models.Instance.GetAll()
+	instances, err := app.dbmodels.Instance.GetAll()
 	if err != nil {
 		app.logger.PrintError(err, nil)
 	}
@@ -76,7 +84,7 @@ func (app *application) ListInstanceHandler(w http.ResponseWriter, r *http.Reque
 		app.logger.PrintError(err, nil)
 	}
 
-	instances, err := app.models.Instance.Get(instance)
+	instances, err := app.dbmodels.Instance.Get(instance)
 	if instances.FriendlyName == "" || err != nil {
 		app.notFoundResponse(w, r)
 		return

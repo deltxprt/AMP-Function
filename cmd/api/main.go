@@ -5,6 +5,7 @@ import (
 	"amp-management-api/internal/jsonlog"
 	"amp-management-api/internal/vcs"
 	"context"
+	"database/sql"
 	"expvar"
 	"flag"
 	"fmt"
@@ -13,22 +14,32 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 var (
 	version = vcs.Version()
 )
 
+// Config
+// DSN example: "postgres://greenlight:pa55word@localhost/greenlight?sslmode=disable"
 type Config struct {
-	Port     int    `yaml:"port"`
-	Env      string `yaml:"env"`
-	Database struct {
+	Port  int    `yaml:"port"`
+	Env   string `yaml:"env"`
+	Redis struct {
 		Address         string `yaml:"address"`
 		Password        string `yaml:"password"`
 		Database        int    `yaml:"database"`
 		MaxIdleConns    int    `yaml:"maxIdleConns"`
 		ConnMaxIdleTime int    `yaml:"connMaxIdleTime"`
-	} `yaml:"database"`
+	} `yaml:"redis"`
+	Postgres struct {
+		Dsn          string `yaml:"dsn"`
+		MaxOpenConns int    `yaml:"maxOpenConns"`
+		MaxIdleConns int    `yaml:"maxIdleConns"`
+		MaxIdleTime  string `yaml:"maxIdleTime"`
+	} `yaml:"postgres"`
 	AMP struct {
 		Url        string `yaml:"url"`
 		Username   string `yaml:"username"`
@@ -40,10 +51,11 @@ type Config struct {
 }
 
 type application struct {
-	config Config
-	logger *jsonlog.Logger
-	models data.Models
-	wg     sync.WaitGroup
+	config    Config
+	logger    *jsonlog.Logger
+	rdbmodels data.RDBModels
+	dbmodels  data.DBModels
+	wg        sync.WaitGroup
 }
 
 func main() {
@@ -55,7 +67,7 @@ func main() {
 	flag.Parse()
 
 	// Load the configuration settings from the config.yml file.
-	configFile, err := os.ReadFile("/config.yaml")
+	configFile, err := os.ReadFile("./examples/config.yaml")
 	if err != nil {
 		logger.PrintError(err, nil)
 	}
@@ -73,10 +85,10 @@ func main() {
 	}
 
 	//cfg.Database.Database = 0
-	cfg.Database.MaxIdleConns = 10
-	cfg.Database.ConnMaxIdleTime = 5
+	cfg.Redis.MaxIdleConns = 10
+	cfg.Redis.ConnMaxIdleTime = 5
 
-	rdb, err := openDB(cfg)
+	rdb, err := openRedis(cfg)
 
 	if err != nil {
 		logger.PrintFatal(err, nil)
@@ -84,12 +96,19 @@ func main() {
 
 	defer rdb.Close()
 
+	db, err := openDB(cfg)
+
+	if err != nil {
+		logger.PrintFatal(err, nil)
+	}
+
 	expvar.NewString("version").Set(version)
 
 	app := &application{
-		config: cfg,
-		logger: logger,
-		models: data.NewModels(rdb),
+		config:    cfg,
+		logger:    logger,
+		rdbmodels: data.NewModels(rdb),
+		dbmodels:  data.NewDBModels(db),
 	}
 	err = app.serve()
 	if err != nil {
@@ -97,12 +116,12 @@ func main() {
 	}
 }
 
-func openDB(cfg Config) (*redis.Client, error) {
+func openRedis(cfg Config) (*redis.Client, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:         cfg.Database.Address,
-		Password:     cfg.Database.Password,
-		DB:           cfg.Database.Database,
-		MaxIdleConns: cfg.Database.MaxIdleConns,
+		Addr:         cfg.Redis.Address,
+		Password:     cfg.Redis.Password,
+		DB:           cfg.Redis.Database,
+		MaxIdleConns: cfg.Redis.MaxIdleConns,
 	})
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -113,4 +132,33 @@ func openDB(cfg Config) (*redis.Client, error) {
 	}
 
 	return rdb, nil
+}
+
+func openDB(cfg Config) (*sql.DB, error) {
+
+	db, err := sql.Open("postgres", cfg.Postgres.Dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	db.SetMaxOpenConns(cfg.Postgres.MaxOpenConns)
+	db.SetMaxIdleConns(cfg.Postgres.MaxIdleConns)
+
+	duration, err := time.ParseDuration(cfg.Postgres.MaxIdleTime)
+
+	if err != nil {
+		return nil, err
+	}
+
+	db.SetConnMaxIdleTime(duration)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = db.PingContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
