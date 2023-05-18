@@ -25,9 +25,10 @@ var (
 // Config
 // DSN example: "postgres://greenlight:pa55word@localhost/greenlight?sslmode=disable"
 type Config struct {
-	Port  int    `yaml:"port"`
-	Env   string `yaml:"env"`
-	Redis struct {
+	Port            int    `yaml:"port"`
+	Env             string `yaml:"env"`
+	RefreshInterval string `yaml:"RefreshInterval"`
+	Redis           struct {
 		Address         string `yaml:"address"`
 		Password        string `yaml:"password"`
 		Database        int    `yaml:"database"`
@@ -63,11 +64,12 @@ func main() {
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
 	displayVersion := flag.Bool("version", false, "Display version and exit")
+	configFilePath := flag.String("config", "./examples/config.yaml", "Path to the configuration file")
 
 	flag.Parse()
 
 	// Load the configuration settings from the config.yml file.
-	configFile, err := os.ReadFile("./examples/config.yaml")
+	configFile, err := os.ReadFile(*configFilePath)
 	if err != nil {
 		logger.PrintError(err, nil)
 	}
@@ -110,10 +112,14 @@ func main() {
 		rdbmodels: data.NewModels(rdb),
 		dbmodels:  data.NewDBModels(db),
 	}
+
+	go updateInstance(app)
+
 	err = app.serve()
 	if err != nil {
 		logger.PrintFatal(err, nil)
 	}
+
 }
 
 func openRedis(cfg Config) (*redis.Client, error) {
@@ -161,4 +167,15 @@ func openDB(cfg Config) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func updateInstance(app *application) {
+	RefreshDuration, err := time.ParseDuration(app.config.RefreshInterval)
+	if err != nil {
+		app.logger.PrintFatal(err, nil)
+	}
+
+	for _ = range time.Tick(RefreshDuration) {
+		app.updateInstancesHandler()
+	}
 }
