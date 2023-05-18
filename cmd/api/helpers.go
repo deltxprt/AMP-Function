@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"unicode"
 )
 
 func (app *application) writeJSON(w http.ResponseWriter, status int, data envelope, headers http.Header) error {
@@ -29,7 +30,7 @@ func (app *application) writeJSON(w http.ResponseWriter, status int, data envelo
 	return nil
 }
 
-func (app *application) readJSON(w http.ResponseWriter, r *http.Response, dst any) error {
+func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	maxBytes := 1_048_576
 	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 
@@ -110,4 +111,21 @@ func (app *application) readInstanceParam(r *http.Request) (string, error) {
 	}
 
 	return instance, nil
+}
+
+func (app *application) readActionParam(r *http.Request) (string, error) {
+
+	params := httprouter.ParamsFromContext(r.Context())
+
+	action := params.ByName("action")
+
+	if action == "" {
+		return "", errors.New("invalid instance or action parameter")
+	}
+	action = strings.ToLower(action)
+	actionRune := []rune(action)
+	actionRune[0] = unicode.ToUpper(actionRune[0])
+	actionString := string(actionRune)
+
+	return actionString, nil
 }
