@@ -9,7 +9,6 @@ import (
 	"expvar"
 	"flag"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"gopkg.in/yaml.v3"
 	"os"
 	"sync"
@@ -52,11 +51,11 @@ type Config struct {
 }
 
 type application struct {
-	config    Config
-	logger    *jsonlog.Logger
-	rdbmodels data.RDBModels
-	dbmodels  data.DBModels
-	wg        sync.WaitGroup
+	config Config
+	logger *jsonlog.Logger
+	//	rdbmodels data.RDBModels
+	dbmodels data.DBModels
+	wg       sync.WaitGroup
 }
 
 func main() {
@@ -90,13 +89,14 @@ func main() {
 	cfg.Redis.MaxIdleConns = 10
 	cfg.Redis.ConnMaxIdleTime = 5
 
-	rdb, err := openRedis(cfg)
+	// dropping the auto closing feature, might add it later
+	//rdb, err := openRedis(cfg)
 
-	if err != nil {
-		logger.PrintFatal(err, nil)
-	}
+	//if err != nil {
+	//	logger.PrintFatal(err, nil)
+	//}
 
-	defer rdb.Close()
+	//defer rdb.Close()
 
 	db, err := openDB(cfg)
 
@@ -107,10 +107,10 @@ func main() {
 	expvar.NewString("version").Set(version)
 
 	app := &application{
-		config:    cfg,
-		logger:    logger,
-		rdbmodels: data.NewModels(rdb),
-		dbmodels:  data.NewDBModels(db),
+		config: cfg,
+		logger: logger,
+		//rdbmodels: data.NewModels(rdb),
+		dbmodels: data.NewDBModels(db),
 	}
 
 	go updateInstance(app)
@@ -122,23 +122,24 @@ func main() {
 
 }
 
-func openRedis(cfg Config) (*redis.Client, error) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:         cfg.Redis.Address,
-		Password:     cfg.Redis.Password,
-		DB:           cfg.Redis.Database,
-		MaxIdleConns: cfg.Redis.MaxIdleConns,
-	})
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	err := rdb.Ping(ctx).Err()
-	if err != nil {
-		return nil, err
-	}
-
-	return rdb, nil
-}
+// dropping the auto closing feature, might add it later
+//func openRedis(cfg Config) (*redis.Client, error) {
+//	rdb := redis.NewClient(&redis.Options{
+//		Addr:         cfg.Redis.Address,
+//		Password:     cfg.Redis.Password,
+//		DB:           cfg.Redis.Database,
+//		MaxIdleConns: cfg.Redis.MaxIdleConns,
+//	})
+//	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+//	defer cancel()
+//
+//	err := rdb.Ping(ctx).Err()
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	return rdb, nil
+//}
 
 func openDB(cfg Config) (*sql.DB, error) {
 

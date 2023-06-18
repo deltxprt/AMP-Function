@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 )
 
 func (app *application) updateInstancesHandler() {
@@ -72,35 +71,6 @@ func (app *application) updateInstancesHandler() {
 					log.Printf("Error creating instance with error: %s", err)
 				}
 				//app.logger.PrintInfo("validating ttl presence on "+instanceData.FriendlyName, nil)
-				ttlIsPresent, err := app.rdbmodels.Instance.GetTTL(instanceInformation.InstanceName)
-				if instanceInformation.Metrics.ActiveUsers.RawValue > 0 && ttlIsPresent == false {
-					//app.logger.PrintInfo("Setting TTL for instance"+instanceData.FriendlyName, nil)
-					expireTime, err := time.ParseDuration("2h")
-					instanceTTL := data.InstanceTTL{
-						InstanceName:         instanceInformation.InstanceName,
-						InstanceFriendlyName: instanceInformation.FriendlyName,
-						TTL:                  expireTime,
-					}
-					err = app.rdbmodels.Instance.SetTTL(instanceTTL)
-
-					if err != nil {
-						app.logger.PrintError(err, nil)
-					}
-				} else if instanceInformation.Metrics.ActiveUsers.RawValue > 0 && ttlIsPresent == true {
-					//app.logger.PrintInfo("Updating TTL for instance"+instanceData.FriendlyName, nil)
-					err := app.rdbmodels.Instance.UpdateTTL(instanceInformation.InstanceID, 120)
-					if err != nil {
-						app.logger.PrintError(err, nil)
-					}
-				} else if instanceInformation.Metrics.ActiveUsers.RawValue == 0 && ttlIsPresent == false {
-					// stop the instance
-					app.logger.PrintInfo("[system]initiated a stop on "+instanceInformation.FriendlyName, nil)
-					stopUrl := app.config.AMP.Url + "/API/ADSModule/StopInstance"
-					_, err := app.dbmodels.Instance.InstanceAction(stopUrl, instanceInformation.InstanceName, sessionId)
-					if err != nil {
-						app.logger.PrintError(err, map[string]string{"detail": "error stopping instance"})
-					}
-				}
 			} else {
 				//app.logger.PrintInfo("Updating instance"+instanceData.FriendlyName, nil)
 				err := app.dbmodels.Instance.Update(instanceInformation)
@@ -108,45 +78,7 @@ func (app *application) updateInstancesHandler() {
 					log.Println("Error updating instance")
 					log.Println(err)
 				}
-
-				//app.logger.PrintInfo("validating ttl presence on "+instanceData.FriendlyName, nil)
-				ttlIsPresent, err := app.rdbmodels.Instance.GetTTL(instanceInformation.InstanceName)
-
-				if instanceInformation.Metrics.ActiveUsers.RawValue > 0 && ttlIsPresent == false {
-					//app.logger.PrintInfo("Setting TTL for instance"+instanceData.FriendlyName, nil)
-					expireTime, err := time.ParseDuration("2h")
-					instanceTTL := data.InstanceTTL{
-						InstanceName:         instanceInformation.InstanceName,
-						InstanceFriendlyName: instanceInformation.FriendlyName,
-						TTL:                  expireTime,
-					}
-					err = app.rdbmodels.Instance.SetTTL(instanceTTL)
-
-					if err != nil {
-						app.logger.PrintError(err, nil)
-					}
-				} else if instanceInformation.Metrics.ActiveUsers.RawValue > 0 && ttlIsPresent == true {
-					//app.logger.PrintInfo("Updating TTL for instance"+instanceData.FriendlyName, nil)
-					expireTime, err := time.ParseDuration("2h")
-					if err != nil {
-						app.logger.PrintError(err, nil)
-					}
-					err = app.rdbmodels.Instance.UpdateTTL(instanceInformation.InstanceID, expireTime)
-					if err != nil {
-						app.logger.PrintError(err, nil)
-					}
-				} else if instanceInformation.Metrics.ActiveUsers.RawValue == 0 && ttlIsPresent == false && instanceInformation.Running == true {
-					// stop the instance
-					stopUrl := app.config.AMP.Url + "/API/ADSModule/StopInstance"
-					//app.logger.PrintInfo(fmt.Sprintf("[SYSTEM] name: %s | players: %d | ttl: %t | running: %t", instanceInformation.InstanceName, instanceInformation.Metrics.ActiveUsers.RawValue, ttlIsPresent, instanceInformation.Running), nil)
-					app.logger.PrintInfo("[system]initiated a stop on "+instanceInformation.FriendlyName, nil)
-					_, err := app.dbmodels.Instance.InstanceAction(stopUrl, instanceInformation.InstanceName, sessionId)
-					if err != nil {
-						app.logger.PrintError(err, map[string]string{"detail": "error stopping instance"})
-					}
-				}
 			}
-
 			//log.Println(instanceID, instanceFriendlyName, instanceName)
 		}
 	}
@@ -205,27 +137,6 @@ func (app *application) actionInstanceHandler(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		app.notFoundResponse(w, r)
 		return
-	}
-
-	expireTime, err := time.ParseDuration("2h")
-
-	switch action {
-	case "Start":
-		err := app.rdbmodels.Instance.SetTTL(data.InstanceTTL{
-			InstanceName:         instanceInformation.InstanceName,
-			InstanceFriendlyName: instanceInformation.FriendlyName,
-			TTL:                  expireTime,
-		})
-		if err != nil {
-			app.logger.PrintError(err, map[string]string{"detail": "error setting ttl on instance " + instanceInformation.FriendlyName})
-		}
-	case "Stop":
-		err := app.rdbmodels.Instance.DeleteTTL(instanceInformation.InstanceName)
-		if err != nil {
-			app.logger.PrintError(err, map[string]string{"detail": "error deleting ttl on instance " + instanceInformation.FriendlyName})
-		}
-	default:
-		app.logger.PrintError(err, map[string]string{"detail": "error reading instance name in json"})
 	}
 
 	app.ampLogin()
