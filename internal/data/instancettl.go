@@ -29,19 +29,19 @@ func (m *InstanceTTLModel) SetTTL(instance InstanceTTL) error {
 	return nil
 }
 
-func (m *InstanceTTLModel) GetTTL(instanceName string) (bool, time.Duration, error) {
+func (m *InstanceTTLModel) GetTTL(instanceName string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	var instance InstanceTTL
-	status := m.DB.Get(ctx, instanceName).Val()
+	//var instance InstanceTTL
+	_, err := m.DB.Get(ctx, instanceName).Result()
 
-	err := json.Unmarshal([]byte(status), &instance)
+	//err := json.Unmarshal([]byte(status), &instance)
 	if err != nil {
-		return false, 0, err
+		return false, err
 	}
 
-	return true, instance.TTL, nil
+	return true, nil
 }
 
 func (m *InstanceTTLModel) UpdateTTL(instanceName string, ttl time.Duration) error {

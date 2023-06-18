@@ -72,7 +72,7 @@ func (app *application) updateInstancesHandler() {
 					log.Printf("Error creating instance with error: %s", err)
 				}
 				//app.logger.PrintInfo("validating ttl presence on "+instanceData.FriendlyName, nil)
-				ttlIsPresent, _, err := app.rdbmodels.Instance.GetTTL(instanceInformation.InstanceName)
+				ttlIsPresent, err := app.rdbmodels.Instance.GetTTL(instanceInformation.InstanceName)
 				if instanceInformation.Metrics.ActiveUsers.RawValue > 0 && ttlIsPresent == false {
 					//app.logger.PrintInfo("Setting TTL for instance"+instanceData.FriendlyName, nil)
 					expireTime, err := time.ParseDuration("2h")
@@ -110,7 +110,7 @@ func (app *application) updateInstancesHandler() {
 				}
 
 				//app.logger.PrintInfo("validating ttl presence on "+instanceData.FriendlyName, nil)
-				ttlIsPresent, _, err := app.rdbmodels.Instance.GetTTL(instanceInformation.InstanceName)
+				ttlIsPresent, err := app.rdbmodels.Instance.GetTTL(instanceInformation.InstanceName)
 
 				if instanceInformation.Metrics.ActiveUsers.RawValue > 0 && ttlIsPresent == false {
 					//app.logger.PrintInfo("Setting TTL for instance"+instanceData.FriendlyName, nil)
@@ -138,6 +138,7 @@ func (app *application) updateInstancesHandler() {
 				} else if instanceInformation.Metrics.ActiveUsers.RawValue == 0 && ttlIsPresent == false && instanceInformation.Running == true {
 					// stop the instance
 					stopUrl := app.config.AMP.Url + "/API/ADSModule/StopInstance"
+					//app.logger.PrintInfo(fmt.Sprintf("[SYSTEM] name: %s | players: %d | ttl: %t | running: %t", instanceInformation.InstanceName, instanceInformation.Metrics.ActiveUsers.RawValue, ttlIsPresent, instanceInformation.Running), nil)
 					app.logger.PrintInfo("[system]initiated a stop on "+instanceInformation.FriendlyName, nil)
 					_, err := app.dbmodels.Instance.InstanceAction(stopUrl, instanceInformation.InstanceName, sessionId)
 					if err != nil {

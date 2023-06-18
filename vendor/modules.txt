@@ -1,3 +1,5 @@
+# github.com/auth0/go-jwt-middleware/v2 v2.1.0
+## explicit; go 1.17
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
@@ -12,6 +14,8 @@ github.com/julienschmidt/httprouter
 github.com/lib/pq
 github.com/lib/pq/oid
 github.com/lib/pq/scram
+# github.com/pkg/errors v0.9.1
+## explicit
 # github.com/redis/go-redis/v9 v9.0.2
 ## explicit; go 1.17
 github.com/redis/go-redis/v9
@@ -24,8 +28,8 @@ github.com/redis/go-redis/v9/internal/rand
 github.com/redis/go-redis/v9/internal/util
 # golang.org/x/crypto v0.9.0
 ## explicit; go 1.17
-golang.org/x/crypto/bcrypt
-golang.org/x/crypto/blowfish
+# gopkg.in/square/go-jose.v2 v2.6.0
+## explicit
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
