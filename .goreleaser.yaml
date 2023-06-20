@@ -10,7 +10,14 @@ builds:
     goos:
       - linux
       - windows
+      - js
     main: ./cmd/api
+    goarch:
+      - amd64
+      - 386
+      - arm64
+      - arm
+      - wasm
 
 release:
   target_commitish: '{{ .Commit }}'

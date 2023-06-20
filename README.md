@@ -35,19 +35,51 @@ see [podman-pods.yml](/podman-pods.yaml)
 
 see [kubernetes example folder](/examples/kuberntes)
 
-## Config File Example
+## Config Examples
 
 *config.yaml*
 ```yaml
 port: 8081
 env: "Production"
-database:
-  address: "localhost:6379"
-  database: 0
+RefreshInterval: "15s"
+postgres:
+  dsn: "postgres://db_user:4n0Th3rP4$$W0rd@172.16.1.1/mydb?sslmode=disable"
+  maxOpenConns: 5
+  maxIdleConns: 5
+  maxIdleTime: "15m"
 amp:
   url: "https://my.amp.enpoint.com"
   username: "ReadUser"
   password: "5uper$eCretP4$$W0rd"
+```
+environment variables
+
+```editorconfig
+PORT=8080
+
+ENVIRONNEMENT=Production
+
+REFRESH_INTERVAL=15s
+
+AMP_URL=https://my.amp.enpoint.com
+
+AMP_USERNAME=ReadUser
+
+AMP_PASSWORD=5uper$eCretP4$$W0rd
+
+#your otp token if the account have one
+AMP_TOKEN=123456
+
+AMP_REMEMBER_ME=false
+
+#if you use ssl mode switch to enable
+POSTGRES_DSN=postgres://db_user:4n0Th3rP4$$W0rd@172.16.1.1/mydb?sslmode=disable 
+
+POSTGRES_MAX_OPEN_CONNS=5
+
+POSTGRES_MAX_IDLE_CONNS=5
+
+POSTGRES_MAX_IDLE_TIME=15m
 ```
 
 ## AMP user Required Permissions

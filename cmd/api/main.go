@@ -10,7 +10,9 @@ import (
 	"flag"
 	"fmt"
 	"gopkg.in/yaml.v3"
+	"log"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -27,13 +29,13 @@ type Config struct {
 	Port            int    `yaml:"port"`
 	Env             string `yaml:"env"`
 	RefreshInterval string `yaml:"RefreshInterval"`
-	Redis           struct {
-		Address         string `yaml:"address"`
-		Password        string `yaml:"password"`
-		Database        int    `yaml:"database"`
-		MaxIdleConns    int    `yaml:"maxIdleConns"`
-		ConnMaxIdleTime int    `yaml:"connMaxIdleTime"`
-	} `yaml:"redis"`
+	//Redis           struct {
+	//	Address         string `yaml:"address"`
+	//	Password        string `yaml:"password"`
+	//	Database        int    `yaml:"database"`
+	//	MaxIdleConns    int    `yaml:"maxIdleConns"`
+	//	ConnMaxIdleTime int    `yaml:"connMaxIdleTime"`
+	//} `yaml:"redis"`
 	Postgres struct {
 		Dsn          string `yaml:"dsn"`
 		MaxOpenConns int    `yaml:"maxOpenConns"`
@@ -75,7 +77,7 @@ func main() {
 
 	err = yaml.Unmarshal(configFile, &cfg)
 	if err != nil {
-		logger.PrintError(err, nil)
+		cfg = getEnvVars()
 	}
 
 	logger.PrintInfo(cfg.Env, nil)
@@ -86,8 +88,8 @@ func main() {
 	}
 
 	//cfg.Database.Database = 0
-	cfg.Redis.MaxIdleConns = 10
-	cfg.Redis.ConnMaxIdleTime = 5
+	//cfg.Redis.MaxIdleConns = 10
+	//cfg.Redis.ConnMaxIdleTime = 5
 
 	// dropping the auto closing feature, might add it later
 	//rdb, err := openRedis(cfg)
@@ -179,4 +181,50 @@ func updateInstance(app *application) {
 	for _ = range time.Tick(RefreshDuration) {
 		app.updateInstancesHandler()
 	}
+}
+
+func getEnvVars() Config {
+	var cfg Config
+	var err error
+
+	cfg.Port, err = strconv.Atoi(os.Getenv("PORT"))
+	if err != nil {
+		cfg.Port = 8080
+	}
+
+	cfg.AMP.Url = os.Getenv("AMP_URL")
+	if cfg.AMP.Url == "" {
+		log.Fatal("AMP_URL is not set")
+	}
+	cfg.AMP.Username = os.Getenv("AMP_USERNAME")
+	if cfg.AMP.Username == "" {
+		log.Fatal("AMP_USERNAME is not set")
+	}
+	cfg.AMP.Password = os.Getenv("AMP_PASSWORD")
+	if cfg.AMP.Password == "" {
+		log.Fatal("AMP_PASSWORD is not set")
+	}
+	cfg.AMP.Token = os.Getenv("AMP_TOKEN")
+
+	cfg.AMP.RememberMe, err = strconv.ParseBool(os.Getenv("AMP_REMEMBER_ME"))
+	if err != nil {
+		cfg.AMP.RememberMe = false
+	}
+
+	cfg.Postgres.Dsn = os.Getenv("POSTGRES_DSN")
+
+	cfg.Postgres.MaxOpenConns, err = strconv.Atoi(os.Getenv("POSTGRES_MAX_OPEN_CONNS"))
+	if err != nil {
+		cfg.Postgres.MaxOpenConns = 5
+	}
+
+	cfg.Postgres.MaxIdleConns, err = strconv.Atoi(os.Getenv("POSTGRES_MAX_IDLE_CONNS"))
+	if err != nil {
+		cfg.Postgres.MaxIdleConns = 5
+	}
+
+	cfg.Postgres.MaxIdleTime = os.Getenv("POSTGRES_MAX_IDLE_TIME")
+	cfg.RefreshInterval = os.Getenv("REFRESH_INTERVAL")
+
+	return cfg
 }
