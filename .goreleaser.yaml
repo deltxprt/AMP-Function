@@ -49,7 +49,7 @@ changelog:
       - '^examples:'
 
 kos:
-  - repository: ghcr.io/ghcr.io/deltxprt/amp-function
+  - repository: ghcr.io/deltxprt/amp-function
     tags:
     - '{{.Version}}'
     - latest

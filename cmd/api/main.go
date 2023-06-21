@@ -70,14 +70,11 @@ func main() {
 	flag.Parse()
 
 	// Load the configuration settings from the config.yml file.
-	configFile, err := os.ReadFile(*configFilePath)
-	if err != nil {
-		logger.PrintError(err, nil)
-	}
 
-	err = yaml.Unmarshal(configFile, &cfg)
+	cfg, err := getConfig(*configFilePath)
+
 	if err != nil {
-		cfg = getEnvVars()
+		logger.PrintFatal(err, map[string]string{"details": "Failed to load the configuration file."})
 	}
 
 	logger.PrintInfo(cfg.Env, nil)
@@ -183,9 +180,26 @@ func updateInstance(app *application) {
 	}
 }
 
-func getEnvVars() Config {
+func getConfig(path string) (Config, error) {
 	var cfg Config
 	var err error
+	_, err = os.Stat(path)
+	if err != nil {
+		log.Println("Config file not found, validating environment variables")
+	} else {
+		configFile, err := os.ReadFile(path)
+		if err != nil {
+			log.Println("file not found")
+		}
+
+		err = yaml.Unmarshal(configFile, &cfg)
+		if err != nil {
+			log.Println(err)
+		}
+		return cfg, nil
+	}
+
+	log.Println("searching environment variables")
 
 	cfg.Port, err = strconv.Atoi(os.Getenv("PORT"))
 	if err != nil {
@@ -194,15 +208,15 @@ func getEnvVars() Config {
 
 	cfg.AMP.Url = os.Getenv("AMP_URL")
 	if cfg.AMP.Url == "" {
-		log.Fatal("AMP_URL is not set")
+		return cfg, err
 	}
 	cfg.AMP.Username = os.Getenv("AMP_USERNAME")
 	if cfg.AMP.Username == "" {
-		log.Fatal("AMP_USERNAME is not set")
+		return cfg, err
 	}
 	cfg.AMP.Password = os.Getenv("AMP_PASSWORD")
 	if cfg.AMP.Password == "" {
-		log.Fatal("AMP_PASSWORD is not set")
+		return cfg, err
 	}
 	cfg.AMP.Token = os.Getenv("AMP_TOKEN")
 
@@ -226,5 +240,5 @@ func getEnvVars() Config {
 	cfg.Postgres.MaxIdleTime = os.Getenv("POSTGRES_MAX_IDLE_TIME")
 	cfg.RefreshInterval = os.Getenv("REFRESH_INTERVAL")
 
-	return cfg
+	return cfg, nil
 }
